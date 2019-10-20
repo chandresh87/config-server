@@ -1,19 +1,31 @@
+RABBITMQ_SERVICE_HOST: localhost
+RABBITMQ_SERVICE_PORT: 5672
+RABBITMQ_SERVICE_USERNAME: guest
+RABBITMQ_SERVICE_PASSWORD: guest
+
 tracer.property: "I AM THE Dev"
-success.message: Data saved succesfully.
+success.message: Data saved succesfully in db.
 
 #Database property
 spring.jpa.database: "mysql"
 spring.datasource.platform: "mysql"
-spring.jpa.show-sql: "true"
-spring.datasource.testWhileIdle: "true"
+spring.datasource.testWhileIdle: true
 spring.datasource.validationQuery: "SELECT 1"
-spring.jpa.hibernate.ddl-auto: update
-spring.datasource.url: "jdbc:mysql://10.97.238.137:3307/personMicroService"  
-#spring.datasource.url: "jdbc:mysql://192.168.1.65:3307/personMicroService"  
+spring.jpa.hibernate.ddl-auto: "update"
+spring.jpa.show-sql: true
+spring.jpa.format_sql: true
+spring.jpa.generate-ddl: true
+#spring.datasource.url: "jdbc:mysql://100.120.56.176:3307/personMicroService"  
+spring.datasource.url: "jdbc:mysql://192.168.1.3:3307/personMicroService"  
 spring.datasource.username:  db_user
-spring.datasource.password: "{cipher}b4d96af236cc7ae0f4e39ba2f23facecc0a191392a5476b4fd14a3e0ed60e0ea"
-spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.MySQL5Dialect
-spring.database.driverClassName: com.mysql.jdbc.Driver
+#spring.datasource.password: "{cipher}b4d96af236cc7ae0f4e39ba2f23facecc0a191392a5476b4fd14a3e0ed60e0ea"
+spring.datasource.password: "db_user"
+spring.jpa.properties.hibernate.dialect: "org.hibernate.dialect.MySQL5InnoDBDialect"
+spring.database.driverClassName: "com.mysql.jdbc.Driver"
+
+#Redis 
+spring.redis.host: 192.168.1.3
+spring.redis.port: 6379
 
 ##Hystrix property
 #hystrix.command.searchAggregation.execution.isolation.thread.timeoutInMilliseconds: 1
@@ -33,36 +45,65 @@ hystrix.metrics.rollingStats.timeInMilliseconds: 15000
 #The number of metrics buckets Hystrix will maintain within its monitoring window.
 hystrix.metrics.rollingStats.numBuckets: 5
 #hystrix timeout
-hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds: 31000
+hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds: 21000
 
-feign:
-    hystrix:
-        enabled: true
 spring: 
-   cloud:    
+    cloud:    
       stream:
         bindings:
-          output:
-            destination: TPI_Q1
+          input:
+            destination: inboundOrgChanges
             binder: local_rabbit
             content-type: application/json
-            group: TPIService
+            group: personservice
         binders:
           local_rabbit:
             type: rabbit
             environment:
               spring:
                 rabbitmq:
-                  host: localhost
-                  port: 5672
-                  username: guest
-                  password: guest
-                  virtual-host: /
-                
+                    host: ${RABBITMQ_SERVICE_HOST}
+                    port:  ${RABBITMQ_SERVICE_PORT}
+                    username: ${RABBITMQ_SERVICE_USERNAME}
+                    password: ${RABBITMQ_SERVICE_PASSWORD}
+                    virtual-host: /
+    zipkin:
+        enabled: true
+        service:
+            name: personservice
+        sender:
+            type: web
+        base-url: http://localhost:9411
+    sleuth:
+        enabled: true
+        sampler:
+            probability: 1.0
+           
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: "bus-refresh,bus-env"
+       
+feign:
+    hystrix:
+        enabled: true
+        
+hystrix.shareSecurityContext: true
+
+#hystrix timeout
+hystrix:
+  command:
+    OrganizationFeignClient#getOrganization(Integer):
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 21000
+            
 organizationService:
   ribbon:
     # Max number of retries on the same server (excluding the first try)
-    MaxAutoRetries: 3
+    MaxAutoRetries: 2
 
     # Max number of next servers to retry (excluding the first server)
     MaxAutoRetriesNextServer: 0
@@ -71,7 +112,7 @@ organizationService:
     OkToRetryOnAllOperations: true
 
     # Interval to refresh the server list from the source
-    #ServerListRefreshInterval: 2000
+    ServerListRefreshInterval: 2000
 
     # Connect timeout used by Apache HttpClient
     ConnectTimeout: 10000
@@ -86,3 +127,8 @@ logging:
     com.netflix: WARN
     org.springframework.web: WARN
     com.thoughtmechanix: DEBUG
+
+management.endpoint.chaosmonkey.enabled: true
+
+# include specific endpoints
+management.endpoints.web.exposure.include: health,info,chaosmonkey,hystrix.stream  

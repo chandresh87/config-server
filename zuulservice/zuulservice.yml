@@ -1,11 +1,57 @@
-hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds: 2500 
-hystrix.command.personservice.execution.isolation.thread.timeoutInMilliseconds: 10000 #default 1 sec
-licensingservice.ribbon.ReadTimeout: 10000 #default 5 sec
+hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds: 102000 #used by the zuul
+hystrix.command.personservice.execution.isolation.thread.timeoutInMilliseconds: 102000 #default 1 sec
+licensingservice.ribbon.ReadTimeout: 50000 #default 5 sec
+personservice.ribbon.ReadTimeout: 50000 #default 5 sec
+authservice.ribbon.ReadTimeout: 50000 #default 5 sec
 zuul.debug.request: true
 
 zuul:
-  ignored-services: '*'
+  #ignored-services: '*'  #ignore eureka generated routes 
   prefix:  /api
   routes:
-      personservice: /personservice/**
-      organizationservice:  /orgservice/**
+    personservice: /personservice/**
+    organizationservice:  /orgservice/**
+  sensitiveHeaders: Cookie,Set-Cookie    
+
+
+server:
+  port: 5555
+
+  #Setting logging levels
+logging:
+    level:
+      com.netflix: WARN
+      org.springframework.web: WARN
+
+
+eureka:
+  instance:
+    prefer-ip-address: true # Register the IP of the service rather than the host name. preffered for the docker
+  client:
+    register-with-eureka: true # Trigger to tell the service to register itself with Eureka
+    fetchRegistry: true # Pull down a local copy of the registry
+    service-url:
+      defaultZone: http://${discovery.user-name}:${discovery.password}@localhost:8761/eureka/    #Location of the Eureka Service
+ 
+ 
+discovery:
+  user-name: eureka-user
+  password: eureka-pass 
+        
+management.security.enabled: false    
+management.endpoints.web.exposure.include: info, health, routes  
+
+spring.sleuth.sampler.probability: 1.0  
+spring.zipkin.baseUrl: http://localhost:9411/
+
+security:
+  oauth2:
+    client:
+      clientId: ITMP
+      clientSecret: ITMP
+      accessTokenUri: http://localhost:8901/oauth/token
+      #userAuthorizationUri: https://github.com/login/oauth/authorize
+      clientAuthenticationScheme: form
+    #resource:
+      #userInfoUri: https://api.github.com/user
+      #preferTokenInfo: false

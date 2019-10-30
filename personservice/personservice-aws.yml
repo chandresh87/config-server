@@ -113,7 +113,7 @@ organizationService:
     ConnectTimeout: 10000
 
     # Read timeout used by Apache HttpClient# After x amount of time new request would be sent
-    ReadTimeout: 1000
+    ReadTimeout: 3000
                    
 #Setting the logging levels for the service
 
